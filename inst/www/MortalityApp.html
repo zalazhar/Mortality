@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Nabel Yahoo app</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+<!-- ocpu library -->
+<script src="opencpu/jquery-1.10.2.min.js"> </script>
+<script src="q.js"> </script>
+<script src= "opencpu/opencpu-0.4.js"> </script>
+<script src= "react/build/react.js"> </script>
+<script src= "react/build/react-dom.js"> </script>
+<script src= "promise.min.js"> </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.23/browser.min.js"></script>
+
+<!-- some optional styling stuff -->
+<link href="bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+<link href="jqueryui/css/ui-lightness/jquery-ui-1.10.3.custom.css" rel="stylesheet" media="screen">
+
+<script src="bootstrap/js/bootstrap.js"> </script>
+<script src="jqueryui/jquery-ui-1.10.3.custom.js"> </script>
+
+
+<body>
+
+<script>
+  var url1 = 'https://public.opencpu.org/ocpu/library/MASS/data/Boston/json';
+  var url2 = 'https://public.opencpu.org/ocpu/library/stats/R/rnorm'
+  var url3 = 'https://public.opencpu.org/ocpu/library/graphics/R/plot'
+  var url4 = '/ocpu/library/mortality/R/listQx'
+  var url5 = '/ocpu/library/mortality/R/drawLifeExpectancy'
+  
+  function f1(url){ 
+     var p = new promise.Promise();
+     promise.get(url).then(function(error, text, xhr) {
+     if (error) {
+        alert('Error ' + xhr.status);
+        return;
+    }
+     p.done(null,xhr.status);
+    });
+         
+    return p; 
+  }
+  
+  function f2(url,data){
+   var p = new promise.Promise();
+   x = data 
+  
+    promise.post(url,x).then(function(error, text, xhr) {
+     if (error) {
+        alert('Error ' + xhr.getResponseHeader("Location"));
+        return;
+    }
+     p.done(null,
+          {'session':xhr.getResponseHeader("X-ocpu-session"),
+           'location': xhr.getResponseHeader("location")
+            
+          });
+    });
+         
+    return p; 
+  }
+  
+  f1(url1).
+  then(function(err,n){alert(n)});
+  
+  f2(url2,{'n':300000,'mean':5} ).
+    then(function(err,Simoutput){return f2(url3,{'x':Simoutput['session']})}).
+    then(function(err,Location){document.getElementById('content').innerHTML = 
+    "<img src =" + Location['location'] + "graphics/1/png />"
+        });
+        
+  f2(url4 ,{'age':0,numberSims:1000,progYear:2184}).
+    then(function(err,Output){return f2(url5,{'age':40,'qxStochasticSet':Output['session']})}).
+    then(function(err,Output){document.getElementById('tables').innerHTML = 
+    "<img src =" + Output['location'] + "graphics/1/png />" });
+  
+  
+</script>
+
+      
+<div id = "content">
+   
+</div>
+
+<div id = "tables" >
+  
+</div>
+
+
+
+</body>
+</html>

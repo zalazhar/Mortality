@@ -1,0 +1,11 @@
+Package: mortality
+Type: Package
+Title: What the package does (short line)
+Version: 1.0
+Date: 2015-05-22
+Author: Zakaria al Azhar
+Maintainer: Who to complain to <zalazhar@gmail.com>
+Description: Calcuate actuarial functions based on stochastic mortality model
+License: GNU
+LazyData: true
+Lazyload:yes
