@@ -1,6 +1,4 @@
 import(ggplot2)
-import(DT)
-import(plotly)
 export(getParameters)
 export(kappa)
 export(noise)
