@@ -189,4 +189,8 @@ getDataTable <- function(dt){
   return (datatable(df))
 }
 
+loadSimData <- function(){
+  load("data/preSim.rda")
+  return(preSim)
+}
 
