@@ -145,7 +145,7 @@ writeQx <- function(listQx){
 
 #actuarial function ex, the life expectancy expressed in years
 #input is the stochastic Qx dataset, which can be generated with the function listQx
-#this stochastic dataset contains 120 age-items, each item having n simulations for x 
+#this stochastic dataset contains 120 age-items, each item having n simulations for t 
 #projection years
 
 eex <- function(listQx, age, startYear = 2014, gender = "Male"){
@@ -185,6 +185,9 @@ drawLifeExpectancy <- function(qxStochasticSet,age){
   
 }
 
+calculate_quantile <- function(stochast){
+  return (data.frame(quantile = quantile(stochast, probs = c(0.75, 0.80, 0.85, 0.90, 0.95, 0.995))))
+}
 getDataTable <- function(dt){
   return (datatable(df))
 }
