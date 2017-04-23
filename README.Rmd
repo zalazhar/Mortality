@@ -5,7 +5,7 @@ date: "February 5, 2017"
 output: html_document
 ---
 
-This document describes 
+This document describes the implementation of the stochastic mortality model as published by the Dutch Actuarial Association. Basically it shows how to generate a set of stochastic morality probabilities (qx). Based on this set you can derive
 ```{r}
 summary(cars)
 ```
