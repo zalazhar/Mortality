@@ -181,6 +181,8 @@ drawLifeExpectancy <- function(qxStochasticSet,age){
                 colour = "blue", fill = 'white') + 
   geom_density() + geom_vline(aes(xintercept=mean(life_expectancy, na.rm=T)),   # Ignore NA values for mean
                               color="red", linetype="dashed", size=1)   
+  d <- d + theme_bw()
+  
   return(d)
   
 }
