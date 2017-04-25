@@ -172,7 +172,7 @@ ages <- function(){
   return (list(0:120))
 }
 
-drawLifeExpectancy <- function(eex){
+histLifeExpectancy <- function(eex){
   
   
   df    <- data.frame(life_expectancy = eex)
@@ -184,6 +184,13 @@ drawLifeExpectancy <- function(eex){
   d <- d + theme_bw()
   
   return(d)
+  
+}
+
+drawLifeExpectancyOverTime <- function(startYear,endYear,age){
+  
+  ls_output <- lapply(startYear:endYear, function(x){mean(eex(preSim,age,x))})
+  return(plot(c(startYear:endYear),unlist(ls_output),xlab="Year",ylab="Life Expectancy"))
   
 }
 
