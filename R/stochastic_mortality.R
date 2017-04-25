@@ -175,7 +175,7 @@ ages <- function(){
 drawLifeExpectancy <- function(eex){
   
   
-  df    <- data.frame(eex)
+  df    <- data.frame(life_expectancy = eex)
   d <- ggplot(df, aes(x = life_expectancy)) +
   geom_histogram(aes(y=..density..),
                 colour = "blue", fill = 'white') + 
