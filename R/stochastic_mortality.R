@@ -1,6 +1,6 @@
 library(ggplot2)
 
-getParameters1 <- function(type="age",asis = TRUE) {
+getParameters_CSV <- function(type="age",asis = TRUE) {
   
   parameters <- switch(type,
                        age = read.csv("age_parameters.csv" , as.is = asis),
@@ -172,10 +172,10 @@ ages <- function(){
   return (list(0:120))
 }
 
-drawLifeExpectancy <- function(qxStochasticSet,age){
+drawLifeExpectancy <- function(eex){
   
   
-  df    <- data.frame(life_expectancy = eex(qxStochasticSet,age))
+  df    <- data.frame(eex)
   d <- ggplot(df, aes(x = life_expectancy)) +
   geom_histogram(aes(y=..density..),
                 colour = "blue", fill = 'white') + 
