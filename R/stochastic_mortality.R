@@ -188,8 +188,8 @@ drawLifeExpectancy <- function(eex){
 }
 
 calculate_quantile <- function(stochast){
-  return (data.frame(quantile = quantile(stochast, probs = c(0.75, 0.80, 0.85, 0.90, 0.95, 0.995)),
-                     best_estimate = mean(stochast)))
+  return (data.frame(quantile = round(quantile(stochast, probs = c(0.75, 0.80, 0.85, 0.90, 0.95, 0.995)),2),
+                     best_estimate = round(mean(stochast),2)))
 }
 getDataTable <- function(dt){
   return (datatable(df))
