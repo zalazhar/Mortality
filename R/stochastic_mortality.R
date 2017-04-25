@@ -190,7 +190,12 @@ histLifeExpectancy <- function(eex){
 drawLifeExpectancyOverTime <- function(startYear,endYear,age){
   
   ls_output <- lapply(startYear:endYear, function(x){mean(eex(preSim,age,x))})
-  return(plot(c(startYear:endYear),unlist(ls_output),xlab="Year",ylab="Life Expectancy"))
+  d <- ggplot(data=data.frame(y=unlist(ls_output)), aes(x=c(startYear:endYear), y=y, group=1)) +
+    geom_line()+
+    geom_point() 
+  d<- d+theme_bw()
+  
+  return(d)
   
 }
 
