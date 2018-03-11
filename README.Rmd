@@ -2,10 +2,10 @@
 title: "Stochastic Mortality"
 author: "Zakaria Al Azhar"
 date: "February 5, 2017"
-output: html_document
+output: html_document 
 ---
 ---
-This document describes the implementation of the stochastic mortality model as published by the Dutch Actuarial Association. Basically it shows how to generate a set of stochastic mortality probabilities (qx). Based on these stochastic mortality probabilities all actuarial functions can be derived.
+This document describes the implementation of the stochastic mortality model as published by the Dutch Actuarial Association. Basically it shows how tkjkj o generate a set of stochastic mortality probabilities (qx). Based on these stochastic mortality probabilities all actuarial functions can be derived.
 Furthermore, the package contains risk measures as VaR
 ---
 
