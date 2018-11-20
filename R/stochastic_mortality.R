@@ -1,6 +1,5 @@
-library(ggplot2)
 
-getParameters_CSV <- function(type="age",asis = TRUE) {
+get_parameters_CSV <- function(type="age",asis = TRUE) {
   
   parameters <- switch(type,
                        age = read.csv("age_parameters.csv" , as.is = asis),
@@ -10,155 +9,141 @@ getParameters_CSV <- function(type="age",asis = TRUE) {
   
 }
 
-getParameters <- function(type="age",asis = TRUE) {
+
+get_parameters <- function(type="age",model = 2014, asis = TRUE) {
   
-  parameters <- switch(type,
-                       age = age,
-                       time = time,
-                       correlation = correlation)
+  # the parameter objects are part of the package and represented as data.frames
+  parameters <- get(paste0(type,"_" ,as.character(model)))
   return (parameters)
   
 }
 
-kappa <- function (numberSims = 0, endYear = 2184) {
-  
-  startYear = 2013
-  if (endYear <= 2013) {endYear = 2013} 
-  # number of projection years
-  progYears <- endYear - startYear + 1
-  
-  noise <- noise(numberSims,progYears)
-  
-  # the levels in which we need the parameters for creating the mortality intensity
-  male = 1 ; female = 2 ;EU = 1;NL = 2
-  dfTimeParams <- getParameters("time")
-  
-  listOutput <- list()
-  for (gender in male:female) { 
-    for (region in NL:EU) { 
-      type <- paste0(gender,region)
-      df <- data.frame()
-      for (year in 1:progYears) {
-          indexYear = paste0("y",year + startYear - 1)
-          indexYearPrev = paste0("y",year + startYear - 2)
-          if (year == 1){
-            startTimeParameters <- rep(dfTimeParams[gender,region + 1], max(numberSims,1))
-            df <- data.frame("y2013" = startTimeParameters)} else{
-              if (region == EU) {
-                df[,indexYear] <-df[,indexYearPrev] + dfTimeParams[gender,"theta"] + noise$epsilon[[gender]][,year]
-              }else{
-                df[,indexYear] <- dfTimeParams[gender,"a"]*df[,indexYearPrev] + noise$delta[[gender]][,year]      
-              }   
-           }  
-      } 
-   listOutput[[type]] <- df
- }
 
-}
-return (listOutput)
-}
-
-noise  <- function(numSims,progYears){
+noise <- function (num_sims, proj_years, model=2014){
  
-  Z1 <- matrix(0,1,progYears);Z2 <- matrix(0,1,progYears)
-  if (numSims != 0) {Z1 <- matrix(rnorm(numSims*progYears),numSims,progYears)
-                     Z2 <- matrix(rnorm(numSims*progYears),numSims,progYears)}
+  corr <- get_parameters(type="correlation", model = model)
+  eigen_values <- eigen(corr)
+  stoch_variables_names <- c("epsilon_male", "epsilon_female","delta_male", "delta_female")
   
-  male = 1;female = 2
-  corr <- getParameters("correlation")
+  set.seed(123)
+  norm_simulations <- matrix(rnorm(num_sims*proj_years*length(stoch_variables_names)), 
+                             num_sims*proj_years,
+                             length(stoch_variables_names))
+  simulations <- t(eigen_values$vectors %*% diag(sqrt(eigen_values$values)) %*%t(norm_simulations))
   
-  epsilon <- list();cov <- list();delta <- list() 
-  
-  for (gender in male:female){
-    epsilon[[gender]] <- sqrt(corr[gender,"variance_e1"])*Z1
-    cov[[gender]]  <- corr[gender,"covariance"]/(sqrt(corr[gender,"variance_e1"])*sqrt(corr[gender,"variance_e2"]))
-    delta[[gender]] <-  sqrt(corr[gender,"variance_e2"])*(cov[[gender]]*Z1 + sqrt(1 - cov[[gender]]^2)*Z2 )
+  stochastic_variables <- list()
+  for (var in 1:length(stoch_variables_names)){
+      stochastic_variables[[var]] <- matrix(simulations[,var], num_sims, proj_years)   
   }
   
-  return (list(epsilon = epsilon, delta = delta))
+  return(stochastic_variables)
   
 }
 
-
-listQx <- function( age = 0, numberSims = 0, progYear = 2184){
+time_dynamics <- function (num_sims, proj_years, model = 2014){
   
-  # making list of dataframes, whereby each item of the list represents a specific age, and
-  # each age (list item) contains the kappa and k simulations for male and female as well.
-  # '11' = NL & Male, '12' = NL & Female, '21' = EU & Male, '22' = EU & Female
-  if (age > 90) {age = 80}
-  maleEU = '11'; maleNL = '12' ; FemaleEU = '21' ; FemaleNL = '22'
-  maxAge = 120
-  ageParameters <- getParameters("age")
-  index = maxAge - age + 1; index90 = 90 - age + 1 ;index80 = 80 - age + 1 
+  types <- list("male.EU" = 1, "female.EU" = 2, "male.NL" = 3, "female.NL" = 4) 
   
-  kappaPar <- kappa(numberSims, progYear)
+  dfTimeParams <- get_parameters("time", model = model)
   
-  qxMale <- list(); qxFemale <- list(); uxMale <- list();uxFemale <- list()
-  for (x in 1:index90) { 
-     parAge <- age  + x - 1
-     lnUxMaleEU <- ageParameters[parAge + 1,"male_Ax"] + ageParameters[parAge+ 1,"male_Bx"]*kappaPar[[maleEU]]
-     lnUxMaleNL <- ageParameters[parAge +1,"male_alphax"] + ageParameters[parAge+1,"male_betax"]*kappaPar[[maleNL]]
-     lnUxFemaleEU <- ageParameters[parAge +1,"female_Ax"] + ageParameters[parAge+1,"female_Bx"]*kappaPar[[FemaleEU]]
-     lnUxFemaleNL <- ageParameters[parAge+1,"female_.alphax"] + ageParameters[parAge+1,"female_betax"]*kappaPar[[FemaleNL]]
-     uxMale[[x]] <- exp(lnUxMaleNL + lnUxMaleEU)
-     uxFemale[[x]] <- exp(lnUxFemaleNL + lnUxFemaleEU)
-     qxMale[[x]] <- 1 - exp(-uxMale[[x]])
-     qxFemale[[x]] <- 1 - exp(-uxFemale[[x]])
-     qxMale[[x]]$age <- age + x -1
-     qxFemale[[x]]$age <- age + x -1
+  simulations <- noise(num_sims,proj_years)
+  
+  dynamic_variables <- list()
+  for (var in seq_along(simulations)){
+    if (var == types$male.EU  || var == types$female.EU){
+      init <- rep(dfTimeParams[var,"K"], max(num_sims,1))
+      theta <- dfTimeParams[var,"theta"]
+      dynamic_variables[[var]] <- t(apply(cbind(init,theta + simulations[[var]]),1,cumsum))
+    }else{
+      init <- rep(dfTimeParams[var - 2,"kappa"], max(num_sims,1))
+      a <- dfTimeParams[var - 2, "a"]
+      dynamic_variables[[var]] <- t(apply(cbind(init, simulations[[var]]),1,
+                                          function(x){filter(x,a,"recursive")}))
+    }
   }
   
-  #for ages > 90 we use an extrapolation method based on the mortality intensities of age-range 80-90
-  sumhkMale <- 0 ; sumhkFemale <- 0 ;sumhkYMale <- 0 ; sumhkYFemale <- 0
-  for (k in 1:11){
-    indexk <- index80 + k - 1
-    yk <- age + indexk - 1
-    sumhkMale <- sumhkMale - log(1/uxMale[[indexk]] - 1 )
-    sumhkFemale <- sumhkFemale - log(1/uxFemale[[indexk]] - 1) 
-    sumhkYMale <- sumhkYMale - yk*(log(1/uxMale[[indexk]] - 1 ))
-    sumhkYFemale <- sumhkYFemale - yk*(log(1/uxFemale[[indexk]] - 1 ))
-  }
-  
- 
-  startIndex <- index90 + 1
-  for (x in startIndex:index) {
-     parAge <- age + x - 1   
-     gxMale <- (1/11 - 85*(parAge - 85)/110)*sumhkMale + (parAge - 85)/110*sumhkYMale
-     gxFemale <- (1/11 - 85*(parAge - 85)/110)*sumhkFemale + (parAge - 85)/110*sumhkYFemale
-     uxMale[[x]] <- 1/(1 + exp(-gxMale)) ; uxFemale[[x]] <- 1/(1 + exp(-gxFemale))
-     qxMale[[x]] <- 1 - exp(-uxMale[[x]]) ; qxFemale[[x]] <- 1 - exp(-uxFemale[[x]])
-     qxMale[[x]]$age <- parAge ; qxFemale[[x]]$age <- parAge
-  }
-  
-
-  return (list(qxMale = qxMale, qxFemale = qxFemale))
-  
-}
-
-writeQx <- function(listQx){
-  write.csv(listQx,"klm.csv")
-  return (invisible)
+  dynamic_variables <- lapply (dynamic_variables, 
+                                function (x) {
+                                  colnames (x) <- paste0("y", (model-1):(model + proj_years - 1))
+                                  return(x)
+                                }
+                              )
+  return(dynamic_variables)
   
 }
 
 
 
-#actuarial function ex, the life expectancy expressed in years
-#input is the stochastic Qx dataset, which can be generated with the function listQx
-#this stochastic dataset contains 120 age-items, each item having n simulations for t 
-#projection years
-
-eex <- function(listQx, age, startYear = 2014, gender = "Male"){
+qx_lower_90 <- function (num_sims = 1, model = 2014, proj_years = 170){
   
-  qx <- switch(gender , Male = listQx$qxMale,Female = listQx$qxFemale)
-  yearProg <- 2184
+  male_female <- 1:2
+  dynamics <- time_dynamics(num_sims,proj_years,model)
+  age_parameters <- get_parameters("age", model)
+  qx <-list()
+  ages <- 0:90
+  for (gender in male_female) {
+    qx[[gender]] <- lapply(ages, 
+                           function(x){1 - exp(-exp(apply_age_factor(age_parameters, x, gender,dynamics)))}
+                           )
+  }
+  
+  return(qx)
+}
+
+generate_qx <- function (num_sims = 1, model = 2014, proj_years = 170){
+  
+  qx <- qx_lower_90(num_sims, model, proj_years)
+  male_female <- 1:2
+  for (gender in male_female){
+    total <- 0
+    total_weighted <- 0
+    for (age in 80:90){
+      total <- total - log(-1/log(1-qx[[gender]][[age+1]]) -1)
+      total_weighted <- total_weighted - age*log(-1/log(1-qx[[gender]][[age+1]]) -1)
+    } 
+    for (age in 91:120 ){
+      qx[[gender]][[age+1]] <- 1 - exp(-1/(1 + exp(-((1/11 - 85*(age - 85)/110)*total + (age - 85)/110*total_weighted))))
+    }
+  }
+  return (qx)
+}
+
+apply_age_factor <- function(age_parameters,age, gender,dynamics){
+  
+  male = 1
+  index = age + 1
+  if (gender == male){
+    age_parameters[index, "male_Ax"] + 
+    age_parameters[index, "male_Bx"]*dynamics[[1]]+
+    age_parameters[index, "male_alphax"] + 
+    age_parameters[index, "male_betax"]*dynamics[[3]]
+  }
+  else{
+    age_parameters[index, "female_Ax"] + 
+    age_parameters[index, "female_Bx"]*dynamics[[2]]+
+    age_parameters[index, "female_.alphax"] + 
+    age_parameters[index, "female_betax"]*dynamics[[4]]
+    
+  }
+  
+}
+
+#life expectancy
+eex <- function(qx, age, start_year = 2014, gender = "male"){
+  
+  gender_index = 1
+  if (gender == "female") {gender_index = 2}
+  
+  qx <- qx[[gender_index]]
+  number_projections <- length(colnames(qx[[1]]))
+  end_projection <- as.numeric(substr(colnames(qx[[1]])[number_projections],2,5))
   
   sumEex <- 0    
-  for (t in startYear:yearProg) {
+  for (t in start_year:end_projection) {
     npx <- 1
-    for (prog in startYear:t ){
-      parAge <- min(age + prog - startYear+1,121)
-      year <- paste0("y", prog)
+    for (projection in start_year:t ){
+      parAge <- min(age + projection - start_year +1,120)
+      year <- paste0("y", projection)
       npx <- npx*(1-qx[[parAge]][,year])     
     }
    sumEex <- sumEex + npx 
@@ -211,4 +196,5 @@ loadSimData <- function(){
   
   return(preSim)
 }
+
 

@@ -1,12 +1,31 @@
 ---
 title: "Stochastic Mortality"
 author: "Zakaria Al Azhar"
-date: "February 5, 2017"
+date: "May 20, 2018"
 output: html_document 
 ---
 ---
-Tklm
-Furthermore, the package contains risk measures as VaR
+
+#Introduction
+
+This package is a practical implemenation of the stochastic mortality model as published by the Dutch Actuarial Assocation (Actuarieel Genootschap) in R. The model can be used to generate  best-estimates as well as uncertainty (quantiles) of various actuarial variables. The full publication of the stochastic mortality model (in Dutch) can be found at [ag-ai.nl](https://www.ag-ai.nl/view.php?action=view&Pagina_Id=731)
+
+#Theoretical background
+
+
+For ages (x < 90 ) and year (t >= $T_{model}$ where  $T_{model} in {2013,2016} ): 
+
+
+
+$ln\ \mu_x(t) = Mortality \ intensitiy \ (t) =  ln\ \mu{^{EU}_x(t)} + ln\ \mu{^{NL}_x(t)  }$
+
+$ln\ \mu_x(t) = Mortality \ intensitiy \ (t) =  ln\ \mu{^{EU}_x(t)} + ln\ \mu{^{NL}_x(t)  }$
+
+$ln\ \mu_x(t) = Mortality \ intensitiy \ (t) =  \mu{^{EU}_x(t)} + \mu{^{NL}_x(t)  }$
+
+
+$x_2$
+
 ---
 
 ```{r}

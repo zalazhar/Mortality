@@ -9,3 +9,4 @@ Description: Calcuate actuarial functions based on stochastic mortality model
 License: GNU
 LazyData: true
 Lazyload:yes
+Imports: ggplot2
