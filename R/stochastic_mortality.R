@@ -19,13 +19,16 @@ get_parameters <- function(type="age",model = 2014, asis = TRUE) {
 }
 
 
-noise <- function (num_sims, proj_years, model=2014){
+noise <- function (num_sims, proj_years, model=2014, seed = 123 ){
  
   corr <- get_parameters(type="correlation", model = model)
   eigen_values <- eigen(corr)
-  stoch_variables_names <- c("epsilon_male", "epsilon_female","delta_male", "delta_female")
+  stoch_variables_names <- c("epsilon_male", 
+                             "epsilon_female",
+                             "delta_male", 
+                             "delta_female")
   
-  set.seed(123)
+  set.seed(seed)
   norm_simulations <- matrix(rnorm(num_sims*proj_years*length(stoch_variables_names)), 
                              num_sims*proj_years,
                              length(stoch_variables_names))
@@ -84,7 +87,7 @@ qx_lower_90 <- function (num_sims = 1, model = 2014, proj_years = 170){
   for (gender in male_female) {
     qx[[gender]] <- lapply(ages, 
                            function(x){1 - exp(-exp(apply_age_factor(age_parameters, x, gender,dynamics)))}
-                           )
+                    )
   }
   
   return(qx)
@@ -102,11 +105,58 @@ generate_qx <- function (num_sims = 1, model = 2014, proj_years = 170){
       total_weighted <- total_weighted - age*log(-1/log(1-qx[[gender]][[age+1]]) -1)
     } 
     for (age in 91:120 ){
-      qx[[gender]][[age+1]] <- 1 - exp(-1/(1 + exp(-((1/11 - 85*(age - 85)/110)*total + (age - 85)/110*total_weighted))))
+      qx[[gender]][[age+1]] <- 
+        1 - exp(-1/(1 + exp(-((1/11 - 85*(age - 85)/110)*total + (age - 85)/110*total_weighted))))
     }
-  }
+    
+    #qx[[gender]] <- data.frame(do.call("rbind", qx[[gender]]))
+    
+    # # convert the list of ages to one big data frame
+    # ages <- rep(0:120, each = num_sims)
+    # sims <- rep(1:num_sims, 121)
+    # qx[[gender]] <- data.frame(do.call("rbind", qx[[gender]]))
+    # qx[[gender]]$age <- ages
+    # qx[[gender]]$simulation <- sims
+    # 
+    # #reshape from wide (proection years) to long
+    # time_columns <-  names(qx[[gender]])[grep("y",names(qx[[gender]]))]
+    # times <- as.numeric(gsub("y","", time_columns))
+    # 
+    # cat("reshaping ....")
+    # qx[[gender]] <- reshape(qx[[gender]], 
+    #                         direction = "long", 
+    #                         varying = time_columns, 
+    #                         v.names = c("value"),
+    #                         times = times)
+    # 
+}
+  
   return (qx)
 }
+
+
+get_qx_series <- function(qx, age, gender = "male", start_year = 2014, type ="diagonal"){
+  
+  qx <- switch(gender,
+              male = qx[[1]],
+              female = qx[[2]]
+        )
+  
+  projection_years <- start_year - 2 + grep("y", colnames(qx[[1]]))
+  end_projection <- max(projection_years)
+  end_projection_year <-start_year + end_projection - 1
+
+  qx_series <- list()
+  start_age = age
+  for (t in start_year:end_projection){
+    age <- start_age + t - start_year
+    qx_series[[paste0(as.character(t),"_", as.character(age))]] <-
+      qx[[min(age,121)]][, paste0("y", as.character(t))]
+  }
+  
+  return(qx_series)
+}
+
 
 apply_age_factor <- function(age_parameters,age, gender,dynamics){
   
@@ -128,11 +178,53 @@ apply_age_factor <- function(age_parameters,age, gender,dynamics){
   
 }
 
+number_of_lifes_series <- function(qx_series){
+  start <- 1
+  lx <- list()
+  lx[[start]] <- 1-qx_series[[start]]
+  for (proj in ((start + 1):length(qx_series))){
+    lx[[proj]] <- (1-qx_series[[proj]])*lx[[proj - 1]]
+  }
+  
+  return(lx)
+}
+
+life_expectancy_series <- function(number_of_lifes_series){
+  ex <- list()
+  end <- length(number_of_lifes_series)
+  ex[[end]] <- number_of_lifes_series[[end]]
+  for (proj in (end - 1):1 ){
+    
+    ex[[proj]] <- number_of_lifes_series[[proj]] + ex[[proj + 1]]
+  }
+  
+  return(ex)
+}
+
+
+# list of projected life expected 
+eex_series <- function (qx_series){
+
+    end <- length(qx_series) 
+    npx <- list()
+    npx[[end]] <-  1- qx_series[[end]] 
+    eex <- 0
+    
+    for (proj in  (end - 1):1){
+      npx[[proj]] <- 1-qx_series[[proj]] + npx[[proj + 1]]*(1- qx_series[[proj]])
+      eex <- eex + npx[[proj]]
+      print (mean(npx))
+    }
+    
+    return(eex)    
+  
+}
+
 #life expectancy
 eex <- function(qx, age, start_year = 2014, gender = "male"){
   
-  gender_index = 1
-  if (gender == "female") {gender_index = 2}
+ 
+  if (gender == "female") gender_index = 2 else gender_index = 1
   
   qx <- qx[[gender_index]]
   number_projections <- length(colnames(qx[[1]]))
@@ -159,7 +251,6 @@ ages <- function(){
 
 histLifeExpectancy <- function(eex){
   
-  
   df    <- data.frame(life_expectancy = eex)
   d <- ggplot(df, aes(x = life_expectancy)) +
   geom_histogram(aes(y=..density..),
@@ -175,9 +266,12 @@ histLifeExpectancy <- function(eex){
 drawLifeExpectancyOverTime <- function(startYear,endYear,age){
   
   ls_output <- lapply(startYear:endYear, function(x){mean(eex(preSim,age,x))})
-  d <- ggplot(data=data.frame(life_expectancy=unlist(ls_output)), aes(x= c(startYear:endYear), y=life_expectancy, group=1)) +
-    geom_line()+
-    geom_point() 
+  d <- ggplot(data=data.frame(life_expectancy=unlist(ls_output)), 
+              aes(x= c(startYear:endYear), 
+              y=life_expectancy, group=1)) +
+      geom_line()+
+      geom_point()
+  
   d<- d+theme_bw()
   
   return(d)
@@ -185,12 +279,12 @@ drawLifeExpectancyOverTime <- function(startYear,endYear,age){
 }
 
 calculate_quantile <- function(stochast){
-  return (data.frame(quantile = round(quantile(stochast, probs = c(0.75, 0.80, 0.85, 0.90, 0.95, 0.995)),2),
+  return (data.frame(quantile = round(quantile(stochast, 
+                                               probs = c(0.75, 0.80, 0.85, 0.90, 0.95, 0.995)),
+                                      2),
                      best_estimate = round(mean(stochast),2)))
 }
-getDataTable <- function(dt){
-  return (datatable(df))
-}
+
 
 loadSimData <- function(){
   
